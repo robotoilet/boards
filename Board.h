@@ -8,16 +8,16 @@
 #define Board_h
 
 #include "Arduino.h"
-#include "FileIO.h"
 
 class Board
 {
   public:
     virtual void begin() = 0;
-    virtual File openFile(char*) = 0;
-    virtual File openFile(char*, byte) = 0;
-
-//  protected:
+    virtual void createFile(char*);
+    virtual void write(char*, byte, char*) = 0;
+    virtual long fileSize(char*) = 0;
+    virtual void relabelFile(char*, char*, byte, byte) = 0;
+    virtual char* nextPathInDir(char*) = 0;
 };
 
 #endif

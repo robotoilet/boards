@@ -16,11 +16,17 @@
 class YunBoard : public Board {
   public:
     virtual void begin();
-    virtual File openFile(char*);
-    virtual File openFile(char*, byte);
+    virtual void createFile(char*);
+    virtual void write(char*, byte, char*);
+    virtual void openDir(char*);
+    virtual long fileSize(char*);
+    virtual void relabelFile(char*, char*, byte, byte);
 
-//  protected:
-//    virtual void getData(char*);
+
+  protected:
+    void openDir(char*);
+    bool dirIsOpen = false;
+    File dir;
 };
 
 #endif

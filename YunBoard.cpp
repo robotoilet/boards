@@ -28,8 +28,11 @@ void YunBoard::createFile(char* filePath) {
 }
 
 void YunBoard::write(char* filePath, byte filePathLength, char* data) {
-  File f = FileSystem.open(filePath, FILE_WRITE);
+  File f = FileSystem.open(filePath, FILE_APPEND);
   for (byte i=0;i<filePathLength;i++) {
+    if (data[i] == '\0') {
+      break;
+    }
     f.print(data[i]);
   }
   f.close();

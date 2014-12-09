@@ -15,6 +15,7 @@
 
 #define SD_PATH "/mnt/sda1/"
 #define SD_PATH_LENGTH sizeof(SD_PATH)
+#define FILENAME_ONLY_SIZE
 #define MAX_FILES_TODEALWITH 10
 
 class YunBoard : public Board {
@@ -26,6 +27,7 @@ class YunBoard : public Board {
     virtual void relabelFile(char*, char*, byte, byte);
     virtual bool nextPathInDir(char*, char*, char*);
     virtual void readFile(char*, char*, unsigned long);
+    virtual void getTimestamp(char*);
 
   protected:
     char filesInDir[MAX_FILES_TODEALWITH][SD_PATH_LENGTH];
@@ -36,5 +38,3 @@ class YunBoard : public Board {
 };
 
 #endif
-
-

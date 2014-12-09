@@ -22,6 +22,26 @@ void YunBoard::begin() {
   FileSystem.begin();
 }
 
+void YunBoard::getTimestamp(char* tsArray) {
+  Process time;
+  time.begin("date");
+  time.addParameter("+%s");
+  time.run();
+
+  int i = 0;
+  while(time.available()>0) {
+    char c = time.read();
+    if (c == '\n') {
+      tsArray[i] = '\0';
+      break;
+    }
+    tsArray[i] = c;
+    i ++;
+  }
+}
+
+
+
 void YunBoard::createFile(char* filePath) {
   File f = FileSystem.open(filePath, FILE_WRITE);
   f.close();
@@ -72,6 +92,7 @@ bool YunBoard::nextPathInDir(char* dirPath, char* pathBuffer, char* suffixFilter
   }
   for (byte i=0;i<MAX_FILES_TODEALWITH;i++) {
     if (filesInDir[i][0] != '\0') {
+      Serial.println(filesInDir[i]);
       strcpy(filesInDir[i], pathBuffer);
       filesInDir[i][0] = '\0';
       return true;

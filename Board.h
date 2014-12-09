@@ -9,6 +9,8 @@
 
 #include "Arduino.h"
 
+#define FILENAME_LENGTH 12
+
 class Board
 {
   public:

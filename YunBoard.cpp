@@ -123,15 +123,10 @@ void YunBoard::readFile(char* fPath, char* buffer, unsigned long checksumByteSum
   f.close();
 }
 
-void YunBoard::relabelFile(char* fileName, char* label, byte labelSize, byte labelIndex){
-  Serial.println("relabelling File " + String(fileName));
+void YunBoard::renameFile(char* oldName, char* newName){
   Process rename;
   rename.begin("mv");
-  rename.addParameter(fileName);
-  for (byte i=0; i<labelSize; i++) {
-    fileName[labelIndex + i] = label[i];
-  }
-  rename.addParameter(fileName);
+  rename.addParameter(oldName);
+  rename.addParameter(newName);
   rename.run();
-  fileName[labelIndex] = '\0';
 }

@@ -16,7 +16,7 @@
 #define SD_PATH "/mnt/sda1/"
 #define SD_PATH_LENGTH sizeof(SD_PATH)
 #define FILENAME_LENGTH 12
-#define TOTAL_PATH_LENGTH SD_PATH + FILENAME_LENGTH
+#define TOTAL_PATH_LENGTH SD_PATH_LENGTH + FILENAME_LENGTH
 
 #define MAX_FILES_TODEALWITH 10
 
@@ -26,7 +26,7 @@ class YunBoard : public Board {
     virtual void createFile(char*);
     virtual void write(char*, byte, char*);
     virtual long fileSize(char*);
-    virtual void relabelFile(char*, char*, byte, byte);
+    virtual void renameFile(char*, char*);
     virtual bool nextPathInDir(char*, char*, char*);
     virtual void readFile(char*, char*, unsigned long);
     virtual void getTimestamp(char*);

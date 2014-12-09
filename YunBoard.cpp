@@ -40,16 +40,14 @@ void YunBoard::getTimestamp(char* tsArray) {
   }
 }
 
-
-
 void YunBoard::createFile(char* filePath) {
   File f = FileSystem.open(filePath, FILE_WRITE);
   f.close();
 }
 
-void YunBoard::write(char* filePath, byte filePathLength, char* data) {
+void YunBoard::write(char* filePath, char* data, byte dataLength) {
   File f = FileSystem.open(filePath, FILE_APPEND);
-  for (byte i=0;i<filePathLength;i++) {
+  for (byte i=0;i<dataLength;i++) {
     if (data[i] == '\0') {
       break;
     }
@@ -60,6 +58,7 @@ void YunBoard::write(char* filePath, byte filePathLength, char* data) {
 
 void YunBoard::createFileList(char* dirPath, char* suffixFilter) {
   File dir = FileSystem.open(dirPath);
+  Serial.println("Creating file list for directory " + String(dirPath));
   long i = 0;
   while(File f = dir.openNextFile()) {
     if (matchesFilter(f.name(), FILEPATH_SIZE, suffixFilter, SUFFIX_SIZE)) {
@@ -69,7 +68,7 @@ void YunBoard::createFileList(char* dirPath, char* suffixFilter) {
     }
   }
   // null the rest to avoid false remnants
-  while(i < MAX_FILES_TODEALWITH) {
+  for (i;i< MAX_FILES_TODEALWITH;i++) {
     filesInDir[i][0] = '\0';
   }
 }
@@ -90,11 +89,16 @@ bool YunBoard::nextPathInDir(char* dirPath, char* pathBuffer, char* suffixFilter
   if (filesInDir[0][0] == '\0') {
     createFileList(dirPath, suffixFilter);
   }
+  Serial.println("files in dir:");
+  for (byte i=0;i<10;i++) {
+    Serial.println(filesInDir[i]);
+  }
+  Serial.println("end of filelist");
   for (byte i=0;i<MAX_FILES_TODEALWITH;i++) {
     if (filesInDir[i][0] != '\0') {
-      Serial.println(filesInDir[i]);
       strcpy(filesInDir[i], pathBuffer);
       filesInDir[i][0] = '\0';
+      Serial.println(pathBuffer);
       return true;
     }
   }
@@ -123,7 +127,7 @@ void YunBoard::readFile(char* fPath, char* buffer, unsigned long checksumByteSum
   f.close();
 }
 
-void YunBoard::renameFile(char* oldName, char* newName){
+void YunBoard::renameFile(char* oldName, char* newName) {
   Process rename;
   rename.begin("mv");
   rename.addParameter(oldName);

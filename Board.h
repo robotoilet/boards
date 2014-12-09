@@ -16,7 +16,7 @@ class Board
   public:
     virtual void begin() = 0;
     virtual void createFile(char*);
-    virtual void write(char*, byte, char*) = 0;
+    virtual void write(char*, char*, byte) = 0;
     virtual long fileSize(char*) = 0;
     virtual void renameFile(char*, char*) = 0;
     virtual bool nextPathInDir(char*, char*, char*) = 0;

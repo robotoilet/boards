@@ -24,7 +24,7 @@ class YunBoard : public Board {
   public:
     virtual void begin();
     virtual void createFile(char*);
-    virtual void write(char*, byte, char*);
+    virtual void write(char*, char*, byte);
     virtual long fileSize(char*);
     virtual void renameFile(char*, char*);
     virtual bool nextPathInDir(char*, char*, char*);

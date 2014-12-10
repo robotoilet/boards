@@ -13,12 +13,6 @@
 
 #include "FileIO.h"
 
-#define SD_PATH "/mnt/sda1/"
-#define SD_PATH_LENGTH sizeof(SD_PATH)
-#define FILENAME_LENGTH 12
-#define TOTAL_PATH_LENGTH SD_PATH_LENGTH + FILENAME_LENGTH
-
-#define MAX_FILES_TODEALWITH 10
 
 class YunBoard : public Board {
   public:
@@ -27,13 +21,13 @@ class YunBoard : public Board {
     virtual void write(char*, char*, byte);
     virtual long fileSize(char*);
     virtual void renameFile(char*, char*);
-    virtual bool nextPathInDir(char*, char*, char*);
-    virtual void readFile(char*, char*, unsigned long);
+    virtual bool nextPathInDir(char*, char*, const byte, char*, byte);
+    virtual unsigned long readFile(char*, char*);
     virtual void getTimestamp(char*);
 
   protected:
-    char filesInDir[MAX_FILES_TODEALWITH][TOTAL_PATH_LENGTH];
-    void createFileList(char*, char*);
+    char** filesInDir = NULL;
+    void createFileList(char*, byte, char*, byte);
     bool matchesFilter(const char*, byte, const char*, byte);
     void openDir(char*);
 

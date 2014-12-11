@@ -63,14 +63,9 @@ void YunBoard::createFileList(char* dirPath, byte filepathLength, char* suffixFi
     if (matchesFilter(f.name(), filepathLength, suffixFilter, labelLength)) {
       filesInDir[i] = new char[filepathLength];
       strcpy(filesInDir[i], f.name());
-      Serial.println("stored filename: " + String(filesInDir[i]));
       i ++;  
     }
   }
-  //// null the rest to avoid false remnants
-  //for (i; i<MAX_FILES_TODEALWITH; i++) {
-  //  filesInDir[i][filepathLength + 1] = {'\0'};
-  //}
 }
 
 // string s, string-length sl, filter f, filterlength fl
@@ -91,8 +86,6 @@ bool YunBoard::nextPathInDir(char* dirPath, char* pathBuffer, const byte filepat
   if (!filesInDir) {
     createFileList(dirPath, filepathLength, suffixFilter, labelLength);
   }
-  Serial.println("copying next path:");
-
   for (byte i=0;i<MAX_FILES_TODEALWITH;i++) {
     if (filesInDir != NULL && filesInDir[i][0] != '\0') {
       strcpy(pathBuffer, filesInDir[i]);

@@ -8,76 +8,113 @@
 #include "Board.h"
 #include "UnoBoard.h"
 
+#include <Wire.h>
 #include <sdFat.h>
+#include "RTClib.h"
+RTC_DS1307 rtc;
+#define CHIP_SELECT 10
+SdFat sd;
 
-#define CHIP_SELECT SS
-#define SD_PIN 10
 
+//init UnoBoard with SPI speed, SPI_HALF_SPEED = when using breadboards, SPI_FULL_SPEED for better performance
 void UnoBoard::begin() {
-  sdFat sd;
-  Serial.print("Initializing sd card...");
-  // make sure that the default chip select pin is set to
-  // output, even if you don't use it:
-  pinMode(SD_PIN, OUTPUT);
-  // see if the card is present and can be initialized:
-  // Initialize the SD card at SPI_HALF_SPEED to avoid bus errors with
-  // breadboards.  use SPI_FULL_SPEED for better performance.
-  if (!sd.begin(chipSelect, SPI_HALF_SPEED)) {
-    sd.initErrorHalt();
-    Serial.println("Card failed, or not present");
-    // don't do anything more:
-    return;
-  }
-  Serial.println("card initialized.");
+  sd.begin(CHIP_SELECT, SPI_HALF_SPEED);
+  rtc.begin();
+
 }
 
+void UnoBoard::getTimestamp(char* tsArray) {
+  tsArray[0] = '\0';
+  DateTime now = rtc.now();
+  uint32_t ut = now.unixtime();  
+  Serial.println(String(ut));
+  sprintf(tsArray,"%ld",ut);
+}
 
 void UnoBoard::createFile(char* filePath) {
-  // open the file. note that only one file can be open at a time,
-  // so you have to close this one before opening another.
-  SdFile f = sd.open(filePath, FILE_WRITE);
+  SdFile f(filePath, O_CREAT | O_WRITE | O_EXCL);
   f.close();
 }
 
-void UnoBoard::write(char* filePath, byte filePathLength, char* data) {
-  SdFile f = sd.open(filePath, FILE_WRITE);
-  for (byte i=0;i<filePathLength;i++) {
+void UnoBoard::write(char* filePath, char* data, byte dataLength) {
+  SdFile f;
+  if(!f.open(filePath, O_RDWR | O_CREAT | O_AT_END)) Serial.println(F("Error writing file"));
+  for (byte i=0;i<dataLength;i++) {
+    if (data[i] == '\0') {
+      break;
+    }
     f.print(data[i]);
+    Serial.print(data[i]);
   }
   f.close();
 }
 
-void UnoBoard::openDir(char* dirPath) {
-  dir = sd.open(dirPath);
-  dirIsOpen = true;
+void UnoBoard::createFileList(char* dirPath, const byte filepathLength, char* suffixFilter, byte labelLength) {
+  Serial.println("Creating file list for directory " + String(dirPath));
+  SdFile dir(dirPath, O_CREAT | O_WRITE | O_EXCL);   //init file
+  SdFile f;
+  filesInDir = new char*[MAX_FILES_TODEALWITH];  //create char array for list of files
+
+  byte i = 0;
+  // open next file in root.  The volume working directory, vwd, is root
+  while(f.openNext(sd.vwd(), O_READ)) {
+    if (i >= MAX_FILES_TODEALWITH) break;
+    
+    char* fName = new char[filepathLength];
+    //fName[0]= {'\0'};
+    f.getFilename(fName);
+    if (matchesFilter(fName, filepathLength, suffixFilter, labelLength)) {
+      filesInDir[i] = new char[filepathLength];
+      strcpy(filesInDir[i], fName);
+      i ++;  
+    }
+    delete[] fName;
+  }
 }
 
-char* UnoBoard::nextPathInDir(char* dirPath) {
-  if (dirIsOpen) {
-    openDir(dirPath);
+// string s, string-length sl, filter f, filterlength fl
+bool UnoBoard::matchesFilter(const char* s, byte sl, const char* f, byte fl) {
+  for (byte i=0;i<fl;i++) {
+    if (s[(sl - 1 - i)] != f[fl - 1 - i]) {
+      return false;
+    }
   }
-  File f = dir.openNextFile();
-  if (f) {
-    const char* fName = f.name();
-    f.close();
-    return fName;
-  } else {
-    dirIsOpen = false;
-    return NULL;
+  return true;
+}
+
+// dirPath: path to the directory to check,
+// pathBuffer: where to write the next matching path
+// filepathLength: number of chars of the path to write
+// suffixFilter: last `labelLength` characters of filename we want
+bool UnoBoard::nextPathInDir(char* dirPath, char* pathBuffer, const byte filepathLength, char* suffixFilter, byte labelLength) {
+  if (!filesInDir) {
+    createFileList(dirPath, filepathLength, suffixFilter, labelLength);
   }
+  for (byte i=0;i<MAX_FILES_TODEALWITH;i++) {
+    if (filesInDir != NULL && filesInDir[i][0] != '\0') {
+      strcpy(pathBuffer, filesInDir[i]);
+      delete[] filesInDir[i];
+      filesInDir[i] = NULL;
+      return true;
+    }
+  }
+  delete[] filesInDir;
+  filesInDir = NULL;
+  return false;
 }
 
 long UnoBoard::fileSize(char* fPath) {
-  SdFile f = sd.open(fPath);
-  long size = f.size();
+  SdFile f;
+  f.open(fPath);
+  long size = f.fileSize();
   f.close();
   return size;
 }
 
-void UnoBoard::readFile(char* fPath, char* buffer, unsigned long checksumByteSum) {
-  SdFile f = sd.open(fPath);
-  Serial.println("starting to read " + String(f.name()));
-  checksumByteSum = 0;
+unsigned long UnoBoard::readFile(char* fPath, char* buffer) {
+  SdFile f;
+  f.open(fPath);
+  unsigned long checksumByteSum = 0;
   unsigned int i = 0;
   int b = f.read();
   while (b != -1) {
@@ -86,9 +123,12 @@ void UnoBoard::readFile(char* fPath, char* buffer, unsigned long checksumByteSum
     i++;
     b = f.read();
   }
+  buffer[i] = '\0';
   f.close();
+  return checksumByteSum;
 }
 
-void UnoBoard::renameFile(char* oldFileName, char* newFileName){
-
+void UnoBoard::renameFile(char* oldName, char* newName) {
+  SdFile oldFile(oldName, O_CREAT | O_WRITE );   //init file
+  if (!oldFile.rename(sd.vwd(),newName)) Serial.println(F("error renaming"));
 }

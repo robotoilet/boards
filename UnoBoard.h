@@ -20,14 +20,13 @@ class UnoBoard : public Board {
     virtual void write(char*, char*, byte);
     virtual long fileSize(char*);
     virtual void renameFile(char*, char*);
-    virtual bool nextPathInDir(char*, char*, const byte, char*, byte);
+    virtual bool nextPathInDir(char*, char*);
     virtual unsigned long readFile(char*, char*);
     virtual void getTimestamp(char*);
 
   protected:
     char** filesInDir = NULL;
-    void createFileList(char*, byte, char*, byte);
-    bool matchesFilter(const char*, byte, const char*, byte);
+    bool matchesFilter(const char*, const char*);
  //   void openDir(char*);
 
 };

@@ -51,25 +51,10 @@ void YunBoard::write(char* filePath, char* data, byte dataLength) {
   f.close();
 }
 
-void YunBoard::createFileList(char* dirPath, byte filepathLength, char* suffixFilter, byte labelLength) {
-  File dir = FileSystem.open(dirPath);
-  Serial.println("Creating file list for directory " + String(dirPath));
-
-  filesInDir = new char*[MAX_FILES_TODEALWITH];
-
-  byte i = 0;
-  while(File f = dir.openNextFile()) {
-    if (i >= MAX_FILES_TODEALWITH) break;
-    if (matchesFilter(f.name(), filepathLength, suffixFilter, labelLength)) {
-      filesInDir[i] = new char[filepathLength];
-      strcpy(filesInDir[i], f.name());
-      i ++;  
-    }
-  }
-}
-
-// string s, string-length sl, filter f, filterlength fl
-bool YunBoard::matchesFilter(const char* s, byte sl, const char* f, byte fl) {
+// string s, filter f
+bool YunBoard::matchesFilter(const char* s, const char* f) {
+  byte sl = sizeof(s);
+  byte fl = sizeof(f);
   for (byte i=0;i<fl;i++) {
     if (s[(sl - 1 - i)] != f[fl - 1 - i]) {
       return false;
@@ -78,24 +63,16 @@ bool YunBoard::matchesFilter(const char* s, byte sl, const char* f, byte fl) {
   return true;
 }
 
-// dirPath: path to the directory to check,
-// pathBuffer: where to write the next matching path
-// filepathLength: number of chars of the path to write
+// path: where to write the next matching path (gets passed prepopulated with the directory)
 // suffixFilter: last `labelLength` characters of filename we want
-bool YunBoard::nextPathInDir(char* dirPath, char* pathBuffer, const byte filepathLength, char* suffixFilter, byte labelLength) {
-  if (!filesInDir) {
-    createFileList(dirPath, filepathLength, suffixFilter, labelLength);
-  }
-  for (byte i=0;i<MAX_FILES_TODEALWITH;i++) {
-    if (filesInDir != NULL && filesInDir[i][0] != '\0') {
-      strcpy(pathBuffer, filesInDir[i]);
-      delete[] filesInDir[i];
-      filesInDir[i] = NULL;
+bool YunBoard::nextPathInDir(char* path, char* suffixFilter) {
+  File dir = FileSystem.open(path);
+  while(File f = dir.openNextFile()) {
+    if (matchesFilter(f.name(), suffixFilter)) {
+      strcat(path, f.name());
       return true;
     }
   }
-  delete[] filesInDir;
-  filesInDir = NULL;
   return false;
 }
 

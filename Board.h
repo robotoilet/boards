@@ -20,7 +20,7 @@ class Board
     virtual void write(char*, char*, byte) = 0;
     virtual long fileSize(char*) = 0;
     virtual void renameFile(char*, char*) = 0;
-    virtual bool nextPathInDir(char*, char*, const byte, char*, byte) = 0;
+    virtual bool nextPathInDir(char*, char*) = 0;
     virtual unsigned long readFile(char*, char*) = 0;
     virtual void getTimestamp(char*) = 0;
 };

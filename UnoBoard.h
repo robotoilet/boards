@@ -13,6 +13,8 @@
 
 #include <SdFat.h>
 
+#define LOGDIR  ""
+
 class UnoBoard : public Board {
   public:
     virtual void begin();

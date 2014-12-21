@@ -13,12 +13,16 @@
 
 #include "FileIO.h"
 
+#define LOGDIR  "/mnt/sda1/"
+#define LOGDIR_LENGTH  sizeof(LOGDIR) - 1
+
 
 class YunBoard : public Board {
   public:
+    YunBoard(byte cM) : Board(cM){};
     virtual void begin();
     virtual void createFile(char*);
-    virtual void write(char*, char*, byte);
+    virtual void write(char*, byte);
     virtual long fileSize(char*);
     virtual void renameFile(char*, char*);
     virtual bool nextPathInDir(char*, char*);
@@ -29,7 +33,7 @@ class YunBoard : public Board {
     char** filesInDir = NULL;
     bool matchesFilter(const char*, const char*);
     void openDir(char*);
-
+    virtual void resetDataFilePath();
 };
 
 #endif

@@ -40,8 +40,8 @@ void YunBoard::createFile(char* filePath) {
   f.close();
 }
 
-void YunBoard::write(char* filePath, char* data, byte dataLength) {
-  File f = FileSystem.open(filePath, FILE_APPEND);
+void YunBoard::write(char* data, byte dataLength) {
+  File f = FileSystem.open(dataFilePath, FILE_APPEND);
   for (byte i=0;i<dataLength;i++) {
     if (data[i] == '\0') {
       break;
@@ -105,4 +105,11 @@ void YunBoard::renameFile(char* oldName, char* newName) {
   rename.addParameter(oldName);
   rename.addParameter(newName);
   rename.run();
+}
+
+void YunBoard::resetDataFilePath() {
+  filepathLength = LOGDIR_LENGTH + TIMESTAMP_LENGTH + DOT_LENGTH + LABEL_LENGTH;
+  Serial.println("filePathLength = " + String(LOGDIR_LENGTH) + " + " + String(TIMESTAMP_LENGTH) + " + " + String(DOT_LENGTH) + " + " + String(LABEL_LENGTH));
+  dataFilePath = new char[filepathLength + 1];
+  strcpy(dataFilePath, LOGDIR);
 }

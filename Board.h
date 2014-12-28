@@ -20,6 +20,9 @@
 #define DOT '.'
 #define DOT_LENGTH 1
 
+#define BYTESUM_CHARLENGTH 6
+#define CHECKSUM_LENGTH TIMESTAMP_LENGTH + BYTESUM_CHARLENGTH
+
 
 class Board
 {
@@ -35,6 +38,7 @@ class Board
     virtual bool nextPathInDir(char*, char*) = 0;
     virtual unsigned long readFile(char*, char*) = 0;
     virtual void getTimestamp(char*) = 0;
+    virtual void sendData() = 0;
 
     bool checkCounter() {
       Serial.print("dp" + String(dataPointCounter) + "-");
@@ -61,14 +65,12 @@ class Board
       for (byte i=0; i<LABEL_LENGTH; i++) {
         newName[filepathLength - 1 - i] = label[LABEL_LENGTH - 1 - i];
       }
-      Serial.println("Renaming " + String(oldName) + " to " + String(newName));
       renameFile(oldName, newName);
     }
 
     void createNewDataFile(){
       resetDataFilePath();
       getTimestamp(unixTimestamp);
-      Serial.println("timeStamp " + String(unixTimestamp));
       byte i = 0;
       while (dataFilePath[i] != '\0') {
         i++;
@@ -85,7 +87,6 @@ class Board
       }
       dataFilePath[i] = '\0';
       strcat(dataFilePath, LOG_SUFFIX);
-      Serial.println("\ndataFilePath: " + String(dataFilePath));
       createFile(dataFilePath);
     }
 
@@ -95,6 +96,18 @@ class Board
     byte filepathLength;
     byte dataPointCounter;
     byte counterMax;
+
+    void buildChecksum(char* checksum, char* buffer, unsigned int bufferLength, unsigned long bytes) {
+      sprintf(checksum, "%ld", bytes);
+      for (byte i=strlen(checksum); i<CHECKSUM_LENGTH; i++) {
+        if (i < BYTESUM_CHARLENGTH) {
+          checksum[i] = ':';
+        } else {
+          checksum[i] = buffer[bufferLength - (CHECKSUM_LENGTH - i)];
+        }
+      }
+      checksum[CHECKSUM_LENGTH] = '\0';
+    }
 };
 
 #endif

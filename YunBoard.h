@@ -8,12 +8,12 @@
 #define YunBoard_h
 
 #include "Arduino.h"
-#include <YunClient.h>
 #include "Board.h"
 
 #include "FileIO.h"
 
 #define LOGDIR  "/mnt/sda1/"
+#define LOGDIR_WITHOUT_SLASH  "/mnt/sda1"
 #define LOGDIR_LENGTH  sizeof(LOGDIR) - 1
 
 
@@ -28,6 +28,7 @@ class YunBoard : public Board {
     virtual bool nextPathInDir(char*, char*);
     virtual unsigned long readFile(char*, char*);
     virtual void getTimestamp(char*);
+    virtual void sendData();
 
   protected:
     char** filesInDir = NULL;

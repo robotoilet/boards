@@ -56,13 +56,13 @@ void YunBoard::getTimestamp(char* tsArray) {
   }
 }
 
-void YunBoard::createFile(char* filePath) {
-  File f = FileSystem.open(filePath, FILE_WRITE);
+void YunBoard::createFile(char* fPath) {
+  File f = FileSystem.open(fPath, FILE_WRITE);
   f.close();
 }
 
 void YunBoard::write(char* data, byte dataLength) {
-  File f = FileSystem.open(dataFilePath, FILE_APPEND);
+  File f = FileSystem.open(filePath, FILE_APPEND);
   for (byte i=0;i<dataLength;i++) {
     if (data[i] == '\0') {
       break;
@@ -132,11 +132,11 @@ void YunBoard::renameFile(char* oldName, char* newName) {
   rename.run();
 }
 
-void YunBoard::resetDataFilePath() {
-  delete[] dataFilePath;
-  filepathLength = LOGDIR_LENGTH + TIMESTAMP_LENGTH + DOT_LENGTH + LABEL_LENGTH;
-  dataFilePath = new char[filepathLength + 1];
-  strcpy(dataFilePath, LOGDIR);
+void YunBoard::resetFilepath() {
+  delete[] filePath;
+  byte fpLength = LOGDIR_LENGTH + TIMESTAMP_LENGTH + DOT_LENGTH + LABEL_LENGTH;
+  filePath = new char[fpLength + 1];
+  strcpy(filePath, LOGDIR);
 }
 
 // 3. Data Transfer to server

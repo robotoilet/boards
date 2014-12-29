@@ -47,7 +47,7 @@ class Board
         dataPointCounter ++;
         bol = true;
       } else {
-        relabelFile(dataFilePath, CLOSED_SUFFIX);
+        relabelFile(filePath, CLOSED_SUFFIX);
         // 2. create a new file with timestamped name
         createNewDataFile();
         bol = false;
@@ -69,30 +69,30 @@ class Board
     }
 
     void createNewDataFile(){
-      resetDataFilePath();
+      resetFilepath();
       getTimestamp(unixTimestamp);
       byte i = 0;
-      while (dataFilePath[i] != '\0') {
+      while (filePath[i] != '\0') {
         i++;
       }
       byte k = 0;
       for (i;i<filepathLength;i++) {
-        if (k == 8) { dataFilePath[i] = DOT;
+        if (k == 8) { filePath[i] = DOT;
         } else if (k < 8) {
-          dataFilePath[i] = unixTimestamp[k];
+          filePath[i] = unixTimestamp[k];
         } else {
-          dataFilePath[i] = unixTimestamp[k - 1];
+          filePath[i] = unixTimestamp[k - 1];
         }
         k++;
       }
-      dataFilePath[i] = '\0';
-      strcat(dataFilePath, LOG_SUFFIX);
-      createFile(dataFilePath);
+      filePath[i] = '\0';
+      strcat(filePath, LOG_SUFFIX);
+      createFile(filePath);
     }
 
   protected:
-    virtual void resetDataFilePath() = 0;
-    char* dataFilePath;
+    virtual void resetFilepath() = 0;
+    char* filePath;
     byte filepathLength;
     byte dataPointCounter;
     byte counterMax;

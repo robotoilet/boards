@@ -36,7 +36,7 @@ void UnoBoard::createFile(char* filePath) {
   f.close();
 }
 
-void UnoBoard::write(char* filePath, char* data, byte dataLength) {
+void UnoBoard::write(char* data, byte dataLength) {
   SdFile f;
   if(!f.open(filePath, O_RDWR | O_CREAT | O_AT_END)) Serial.println(F("Error writing file"));
   for (byte i=0;i<dataLength;i++) {
@@ -104,4 +104,14 @@ unsigned long UnoBoard::readFile(char* fPath, char* buffer) {
 void UnoBoard::renameFile(char* oldName, char* newName) {
   SdFile oldFile(oldName, O_CREAT | O_WRITE );   //init file
   if (!oldFile.rename(sd.vwd(),newName)) Serial.println(F("error renaming"));
+}
+
+void UnoBoard::resetFilepath() {
+  delete[] filePath;
+  byte fpLength = TIMESTAMP_LENGTH + DOT_LENGTH + LABEL_LENGTH;
+  filePath = new char[fpLength + 1];
+}
+
+void UnoBoard::sendData() {
+  // TODO: talk to other board, ask to send dataPoints
 }

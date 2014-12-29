@@ -31,10 +31,9 @@ class YunBoard : public Board {
     virtual void sendData();
 
   protected:
+    virtual void resetFilepath();
     char** filesInDir = NULL;
     bool matchesFilter(const char*, const char*);
-    void openDir(char*);
-    virtual void resetDataFilePath();
 };
 
 #endif

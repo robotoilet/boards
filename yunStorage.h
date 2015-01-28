@@ -25,6 +25,7 @@
 #define TS_INDEX_DP 3
 
 
+
 char filePath[FILEPATH_LENGTH + 1];
 byte dataPointCounter = 0;
 
@@ -33,34 +34,81 @@ void createFile(char* fPath) {
   f.close();
 }
 
-void resetFilepath() {
-  filePath[0] = '\0';
-  strcpy(filePath, LOGDIR);
+// resets provided `fPath` to the default LOGDIR
+void resetFilepath(char* fPath) {
+  fPath[0] = '\0';
+  strcpy(fPath, LOGDIR);
 }
 
-void createNewDataFile(char* dataPoint){
-  resetFilepath();
+void createFilePath(char* fPath, char* label, char* ts) {
+  resetFilepath(fPath); 
+  strcat(fPath, label); // start actual filename with `label`
+  // now we have to deal with the fact that there *has* to be a dot in our
+  // filename :-|
+  // 1. fast-forward to the index after the label
   byte i = 0;
-  while (filePath[i] != '\0') {
+  while (fPath[i] != '\0') {
     i++;
   }
+  // 2. write the timestamp 'around' the dot
   byte k = 0;
-  for (i;i<FILEPATH_LENGTH-1;i++) {
-    if (k == 8) { filePath[i] = DOT;
-    } else if (k < 8) {
-      filePath[i] = dataPoint[TS_INDEX_DP + k];
+  for (i;i<FILEPATH_LENGTH;i++) {
+    if (k == 8 - LABEL_LENGTH) { fPath[i] = DOT;
+    } else if (k < 8 - LABEL_LENGTH) {
+      fPath[i] = ts[k];      // until the dot we write as normal
     } else {
-      filePath[i] = dataPoint[TS_INDEX_DP + k - 1];
+      fPath[i] = ts[k - 1];  // after the dot we still want the ts index - 1
     }
     k++;
   }
-  filePath[i] = '\0';
-  strcat(filePath, LOG_SUFFIX);
-  Serial.println("creating " + String(filePath));
+  fPath[i] = '\0';
+  Serial.println("S: creating filepath " + String(fPath));
+}
+
+void removeTransferredFile(char* checksum) {
+  char rmfPath[FILEPATH_LENGTH + 1];
+  char ts[TIMESTAMP_LENGTH + 1];
+  strncpy(ts, checksum, TIMESTAMP_LENGTH);
+  ts[TIMESTAMP_LENGTH] = '\0';
+  createFilePath(rmfPath, SENT_SUFFIX, ts);
+
+  if (FileSystem.remove(rmfPath)) {
+    //Serial.println("[STORAGE:] removed file: " + String(rmfPath));
+  }
+}
+
+void createNewDataFile(char* dataPoint){
+  char ts[TIMESTAMP_LENGTH + 1];
+  // copy the timestamp from the datapoint into the ts array
+  strncpy(ts, dataPoint+TS_INDEX_DP, TIMESTAMP_LENGTH);
+  ts[TIMESTAMP_LENGTH] = '\0';
+  createFilePath(filePath, LOG_SUFFIX, ts);
   createFile(filePath);
 }
 
+bool checkCounter(char* dataPoint) {
+  //Serial.print("dp" + String(dataPointCounter) + " - ");
+  boolean bol = true;
+  if (dataPointCounter == 0) {
+    // rename current file
+    if (FileSystem.exists(filePath)) {
+      relabelFile(filePath, CLOSED_SUFFIX, LOGDIR_LENGTH);
+    }
+    // create a new file with timestamped name
+    createNewDataFile(dataPoint);
+    dataPointCounter ++;
+  } else if (dataPointCounter < DATAPOINT_MAX) {
+    dataPointCounter ++;
+  } else {
+    bol = false;
+    dataPointCounter = 0;
+  }
+  return bol;
+}
+
 void writeDataPoint(char* data) {
+  checkCounter(data);
+  Serial.println("S: Writing data " + String(data) + " to " + String(filePath));
   File f = FileSystem.open(filePath, FILE_APPEND);
   for (byte i=0;i<strlen(data);i++) {
     if (data[i] == '\0') {
@@ -71,29 +119,10 @@ void writeDataPoint(char* data) {
   f.close();
 }
 
-bool checkCounter(char* dataPoint) {
-  Serial.print("dp" + String(dataPointCounter) + "-");
-  boolean bol;
-  if (dataPointCounter < DATAPOINT_MAX) {
-    dataPointCounter ++;
-    bol = true;
-  } else {
-    // 1. rename current file
-    relabelFile(filePath, CLOSED_SUFFIX);
-    // 2. create a new file with timestamped name
-    createNewDataFile(dataPoint);
-    bol = false;
-    dataPointCounter = 0;
-  }
-  return bol;
-}
-
 // string s, filter f
 bool matchesFilter(const char* s, const char* f) {
-  byte sl = strlen(s);
-  byte fl = strlen(f);
-  for (byte i=0;i<fl;i++) {
-    if (s[(sl - 1 - i)] != f[fl - 1 - i]) {
+  for (byte i=0;i<strlen(f);i++) {
+    if (f[i] != s[LOGDIR_LENGTH + i]) {
       return false;
     }
   }
@@ -101,16 +130,13 @@ bool matchesFilter(const char* s, const char* f) {
 }
 
 // path: where to write the next matching path (gets passed prepopulated with the directory)
-// suffixFilter: last `labelLength` characters of filename we want
-bool nextPathInDir(char* path, char* suffixFilter) {
+// suffixFilter: label characters of filename we want
+bool nextPathInDir(char* path, char* labelFilter) {
   File dir = FileSystem.open(path);
-  path[0] = '\0';
   while(File f = dir.openNextFile()) {
-    Serial.println("checking file  " + String(f.name()));
-    if (matchesFilter(f.name(), suffixFilter)) {
-      Serial.println("path before: " + String(path));
+    if (matchesFilter(f.name(), labelFilter)) {
+      path[0] = '\0';
       strcat(path, f.name());
-      Serial.println("path after: " + String(path));
       return true;
     }
   }
@@ -141,18 +167,20 @@ unsigned long readFile(char* fPath, char* buffer) {
 }
 
 
-unsigned long getDataForSending(char* sendBuffer) {
+bool getDataForSending(char* sendBuffer) {
   char* sendFilePath = new char[FILEPATH_LENGTH + 1];
   strcat(sendFilePath, LOGDIR_WITHOUT_SLASH);
-  Serial.println("Preparing to send data");
   unsigned long checksumBytes = 0;
+  bool success = false;
   if (nextPathInDir(sendFilePath, CLOSED_SUFFIX)) {
-    Serial.println("..for file " + String(sendFilePath));
-
     char startEnd[10];
     // checksumBytes: sum of all byte-values of the file
-    checksumBytes = readFile(sendFilePath, sendBuffer);
+    readFile(sendFilePath, sendBuffer);
+    relabelFile(sendFilePath, SENT_SUFFIX, LOGDIR_LENGTH);
+    success = true;
+  } else {
+    Serial.println("S: can't find any matching files at " + String(sendFilePath));
   }
   delete[] sendFilePath;
-  return checksumBytes;
+  return success;
 }

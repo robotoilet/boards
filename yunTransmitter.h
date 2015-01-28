@@ -4,20 +4,46 @@
 #include "SPI.h"
 #include <PubSubClient.h>
 
+#include <Wire.h>
 
 #define BYTESUM_CHARLENGTH 6
 #define CHECKSUM_LENGTH TIMESTAMP_LENGTH + BYTESUM_CHARLENGTH
 
 #define BUFFER_LENGTH 23 * 5
 
+#define CHECK_FOR_UPDATES_DURATION 5000
 
-//byte server[] = {10, 10, 63, 88};  // WIFI-specifics
-byte server[] = {192, 168, 0, 7};  // WIFI-specifics
+#define COLLECTOR 0x1
+#define STORAGE 0x2
+
+#define TIMESTAMP_LENGTH 10
+#define TS_INDEX_DP 3
+
+#define NO_DATA_CHAR '!'
+
+byte server[] = {10, 10, 63, 133};  // WIFI-specifics
+//byte server[] = {192, 168, 0, 7};  // WIFI-specifics
+
+bool requestToDelete(byte* checksum, unsigned int length) {
+  char* checkSum = new char[length + 1];
+  checkSum[0] = 'D'; // begin with instruction for STORAGE to delete file
+  for (int i=0;i<length;i++) {
+    checkSum[i-1] = checksum[i];
+  }
+  Serial.println("T: verifiedData: " + String(checkSum));
+  Wire.beginTransmission(STORAGE);
+  Wire.write(checkSum);
+  Wire.endTransmission();
+  delete[] checkSum;
+}
 
 // TODO: remove if unused!
 void callback(char* topic, byte* payload, unsigned int length) {
-  Serial.println("CALLBACK!!! topic: " + String(topic));
-  // handle message arrived
+  if (strcmp(topic, "verifiedData") == 0) {
+    requestToDelete(payload, length);
+  } else {
+    Serial.println("T: CALLBACK with unknown topic!!!: " + String(topic));
+  }
 }
 
 int freERam () {
@@ -40,42 +66,58 @@ void buildChecksum(char* checksum, char* buffer) {
       ts[i-TS_INDEX_DP] = buffer[i];
     } else if (i == TS_INDEX_DP+TIMESTAMP_LENGTH) {
       ts[i-TS_INDEX_DP] = '\0';
-      Serial.println("index of null: " + String(i-TS_INDEX_DP));
     }
-    Serial.print(buffer[i]);
     checksumByteSum += (byte)buffer[i];
   }
-  Serial.println("ts: " + String(ts));
-  Serial.println("checksumByteSum: " + String(checksumByteSum));
+  //Serial.println("checksumByteSum: " + String(checksumByteSum));
   sprintf(checksum, "%s:%ld", ts, checksumByteSum);
 }
 
 bool requestDataForSending(char* sendBuffer, char* checksum) {
-  Serial.println("free ram HERE: " + String(freERam()));
-  if (!getDataForSending(sendBuffer)) {
-    return false;
+  bool gotDataPoint;
+  Wire.requestFrom(STORAGE, strlen(sendBuffer));
+  byte i = 0;
+  while (Wire.available()) {
+    char c = Wire.read();
+    if (c == NO_DATA_CHAR) {
+      gotDataPoint = false;
+      continue;
+    }
+    sendBuffer[i] = c;
+    i++;
   }
-  buildChecksum(checksum, sendBuffer);
-  Serial.println("checksum: " + String(checksum));
-  return true;
+  if (gotDataPoint) {
+    buildChecksum(checksum, sendBuffer);
+  }
+  Serial.println("T: checksum: " + String(checksum));
+  return gotDataPoint;
+}
+
+void checkForUpdates() {
+  unsigned long start = millis();
+  // keep listening for a while
+  while (millis() - start <= CHECK_FOR_UPDATES_DURATION) {
+    if (client.loop()) break;
+  }
+  client.disconnect();
 }
 
 // 3. Data Transfer to server
 void sendData() {
   if (client.connected() || client.connect("siteX", "punterX", "punterX")) {
-    Serial.println("connected to server!");
+    Serial.println("T: connected!");
     char sendBuffer[BUFFER_LENGTH + 1];
     char checksum[CHECKSUM_LENGTH + 1];
-    if (requestDataForSending(sendBuffer ,checksum)) {
-      Serial.println("trying to send it..");
+    if (requestDataForSending(sendBuffer, checksum)) {
+      //Serial.println("[T:] trying to send it..");
       if (client.publish(checksum, sendBuffer)) {
-        Serial.println("should have sent the stuff by now..");
-        //relabelToSent(sendFilePath, SENT_SUFFIX);
+        //Serial.println("[T:] should have sent the stuff by now..");
       }
     } else {
-      Serial.println("No data for sending available!");
+      //Serial.println("[T:] No data for sending available!");
     }
+    checkForUpdates();
   } else {
-    Serial.println("Didn't get a connection!");
+    //Serial.println("[T:] Didn't get a connection!");
   }
 }
